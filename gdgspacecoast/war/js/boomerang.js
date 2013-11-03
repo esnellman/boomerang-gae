@@ -8,6 +8,80 @@ var boomerang = angular.module('gdgBoomerang', ['ngSanitize', 'ui.bootstrap'])
             otherwise({ redirectTo: '/about' });
     });
 
+boomerang.filter('hashLinky', function($sanitize, linkyFilter) {
+	  var ELEMENT_NODE = 1;
+	  var TEXT_NODE = 3;
+	  var linkifiedDOM = document.createElement('div');
+	  var inputDOM = document.createElement('div');
+	  
+	  var hashLinky = function hashLinky(startNode) {
+	    var i, ii, currentNode;
+	    
+	    for (i = 0, ii = startNode.childNodes.length; i < ii; i++) {
+	      currentNode = startNode.childNodes[i];
+	      
+	      switch (currentNode.nodeType) {
+	        case ELEMENT_NODE:
+	        	hashLinky(currentNode);
+	          break;
+	        case TEXT_NODE:
+	          var hashtagRegex = /#([A-Za-z0-9-_]+)/g;
+	          currentNode.textContent =  currentNode.textContent.replace(hashtagRegex, '<a href="https://plus.google.com/s/%23$1">#$1</a>');
+	          linkifiedDOM.innerHTML = currentNode.textContent;//linkyFilter(currentNode.textContent);
+	          i += linkifiedDOM.childNodes.length - 1;
+	          while(linkifiedDOM.childNodes.length) {
+	            startNode.insertBefore(linkifiedDOM.childNodes[0], currentNode);
+	          }
+	          startNode.removeChild(currentNode);
+	      }
+	    }
+	    
+	    return startNode;
+	  };
+	
+	 return function(input) {
+		    inputDOM.innerHTML = input;
+		    return hashLinky(inputDOM).innerHTML;
+	 };	 
+});
+
+
+boomerang.filter('htmlLinky', function($sanitize, linkyFilter) {
+	  var ELEMENT_NODE = 1;
+	  var TEXT_NODE = 3;
+	  var linkifiedDOM = document.createElement('div');
+	  var inputDOM = document.createElement('div');
+	  
+	  var linkify = function linkify(startNode) {
+	    var i, ii, currentNode;
+	    
+	    for (i = 0, ii = startNode.childNodes.length; i < ii; i++) {
+	      currentNode = startNode.childNodes[i];
+	      
+	      switch (currentNode.nodeType) {
+	        case ELEMENT_NODE:
+	          linkify(currentNode);
+	          break;
+	        case TEXT_NODE:
+	          linkifiedDOM.innerHTML = linkyFilter(currentNode.textContent);
+	          i += linkifiedDOM.childNodes.length - 1;
+	          while(linkifiedDOM.childNodes.length) {
+	            startNode.insertBefore(linkifiedDOM.childNodes[0], currentNode);
+	          }
+	          startNode.removeChild(currentNode);
+	      }
+	    }
+	    
+	    return startNode;
+	  };
+	  
+	  return function(input) {
+	    inputDOM.innerHTML = input;
+	    return linkify(inputDOM).innerHTML;
+	  };
+	});
+
+
 boomerang.controller('MainControl', function ($scope, Config) {
     $scope.chapter_name = Config.name;
     $scope.google_plus_link = 'https://plus.google.com/' + Config.id;
@@ -130,7 +204,7 @@ boomerang.controller("EventsControl", function ($scope, $http, Config) {
     $scope.$parent.activeTab = "events";
 
     $scope.events = {past: [], future: []};
-    $http.get("http://gdgfresno.com/gdgfeed.php?id=" + Config.id).
+    $http.get("gdgfeed.php?id=" + Config.id).
         success(function (data) {
             var now = new Date();
             for (var i = data.length - 1; i >= 0; i--) {
